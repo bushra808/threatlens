@@ -3,11 +3,23 @@ from datetime import datetime, timezone
 from app.services.classification import classify_priority
 
 
+GITHUB_STATE_STATUS_MAP = {
+    "open": "open",
+    "fixed": "remediated",
+    "dismissed": "false_positive",
+    "auto_dismissed": "false_positive",
+}
+
+
 def parse_datetime(value: str | None) -> datetime:
     if not value:
         return datetime.now(timezone.utc)
 
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def map_github_state_to_status(state: str | None) -> str:
+    return GITHUB_STATE_STATUS_MAP.get((state or "open").lower(), "open")
 
 
 def normalize_dependabot_alert(raw_alert: dict) -> dict:
@@ -18,6 +30,7 @@ def normalize_dependabot_alert(raw_alert: dict) -> dict:
     package = dependency.get("package", {})
     cwes = advisory.get("cwes", [])
     severity = advisory.get("severity", "low").lower()
+    source_state = raw_alert.get("state", "open")
 
     category = "dependency-vulnerability"
     if cwes:
@@ -31,7 +44,7 @@ def normalize_dependabot_alert(raw_alert: dict) -> dict:
         "severity": severity,
         "cvss_score": advisory.get("cvss", {}).get("score"),
         "category": category,
-        "status": raw_alert.get("state", "open"),
+        "status": map_github_state_to_status(source_state),
         "priority": classify_priority(severity),
         "title": advisory.get("summary", "Untitled vulnerability"),
         "description": advisory.get("description", ""),

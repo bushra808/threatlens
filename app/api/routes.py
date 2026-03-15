@@ -1,6 +1,7 @@
+from fastapi import APIRouter, Depends, HTTPException
+import requests
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException
 
 from app.database import get_db
 from app.models import AutomationEvent, Vulnerability
@@ -28,17 +29,40 @@ def health_check(db: Session = Depends(get_db)) -> dict[str, str]:
 
 
 @router.post("/ingest/dependabot", response_model=IngestResponse)
-def ingest_dependabot(db: Session = Depends(get_db)) -> dict[str, int]:
-    return ingest_dependabot_alerts(db)
+def ingest_dependabot(
+    owner: str | None = None,
+    repo: str | None = None,
+    use_mock: bool = False,
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    try:
+        return ingest_dependabot_alerts(db, owner=owner, repo=repo, use_mock=use_mock)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail=f"GitHub API request failed: {exc}") from exc
 
 
 @router.get("/vulnerabilities", response_model=list[VulnerabilityRead])
-def list_vulnerabilities(db: Session = Depends(get_db)) -> list[Vulnerability]:
-    return (
-        db.query(Vulnerability)
-        .order_by(Vulnerability.detected_at.desc(), Vulnerability.id.desc())
-        .all()
-    )
+def list_vulnerabilities(
+    severity: str | None = None,
+    priority: str | None = None,
+    repository: str | None = None,
+    status: str | None = None,
+    db: Session = Depends(get_db),
+) -> list[Vulnerability]:
+    query = db.query(Vulnerability)
+
+    if severity:
+        query = query.filter(Vulnerability.severity == severity.lower())
+    if priority:
+        query = query.filter(Vulnerability.priority == priority.upper())
+    if repository:
+        query = query.filter(Vulnerability.repository == repository)
+    if status:
+        query = query.filter(Vulnerability.status == status.lower())
+
+    return query.order_by(Vulnerability.detected_at.desc(), Vulnerability.id.desc()).all()
 
 
 @router.get("/summary", response_model=SummaryResponse)

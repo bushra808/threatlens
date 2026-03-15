@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import requests
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -9,6 +10,7 @@ from app.models import AutomationEvent, Vulnerability
 
 
 RULES_FILE = Path(__file__).resolve().parents[2] / "mock_data" / "rules.json"
+DEDUPED_EVENT_STATUSES = {"sent", "created", "simulated"}
 
 
 def load_rules() -> dict:
@@ -98,6 +100,22 @@ def log_automation_event(
     return event
 
 
+def automation_already_recorded(db: Session, vulnerability: Vulnerability, action_type: str) -> bool:
+    return (
+        db.query(AutomationEvent.id)
+        .filter(
+            and_(
+                AutomationEvent.vulnerability_id == vulnerability.id,
+                AutomationEvent.action_type == action_type,
+                AutomationEvent.status.in_(DEDUPED_EVENT_STATUSES),
+                AutomationEvent.created_at >= vulnerability.last_seen_at,
+            )
+        )
+        .first()
+        is not None
+    )
+
+
 def run_critical_automations(db: Session) -> dict:
     rules = load_rules()
     critical_actions = rules.get("critical", [])
@@ -109,9 +127,22 @@ def run_critical_automations(db: Session) -> dict:
 
     results = []
     events_created = 0
+    skipped_existing = 0
 
     for vulnerability in critical_findings:
         for action in critical_actions:
+            if automation_already_recorded(db, vulnerability, action):
+                skipped_existing += 1
+                results.append(
+                    {
+                        "vulnerability_id": vulnerability.id,
+                        "action_type": action,
+                        "status": "skipped",
+                        "message": "Existing automation already recorded for this open finding.",
+                    }
+                )
+                continue
+
             if action == "slack_alert":
                 status, message = send_slack_alert(vulnerability)
                 destination = "slack"
@@ -145,5 +176,6 @@ def run_critical_automations(db: Session) -> dict:
     return {
         "processed_critical_findings": len(critical_findings),
         "events_created": events_created,
+        "skipped_existing": skipped_existing,
         "results": results,
     }

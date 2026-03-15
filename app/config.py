@@ -17,6 +17,11 @@ class Settings:
         "DATABASE_URL",
         "postgresql:///threatlens",
     )
+    GITHUB_API_URL: str = os.getenv("GITHUB_API_URL", "https://api.github.com")
+    GITHUB_API_VERSION: str = os.getenv("GITHUB_API_VERSION", "2022-11-28")
+    GITHUB_TOKEN: str | None = os.getenv("GITHUB_TOKEN")
+    GITHUB_OWNER: str | None = os.getenv("GITHUB_OWNER")
+    GITHUB_REPO: str | None = os.getenv("GITHUB_REPO")
     SLACK_WEBHOOK_URL: str | None = os.getenv("SLACK_WEBHOOK_URL")
     JIRA_BASE_URL: str | None = os.getenv("JIRA_BASE_URL")
     JIRA_USER_EMAIL: str | None = os.getenv("JIRA_USER_EMAIL")

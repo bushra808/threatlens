@@ -44,6 +44,8 @@ class IngestResponse(BaseModel):
     processed: int
     inserted: int
     updated: int
+    remediated: int
+    unchanged: int
 
 
 class SummaryResponse(BaseModel):
@@ -56,4 +58,5 @@ class SummaryResponse(BaseModel):
 class AutomationRunResponse(BaseModel):
     processed_critical_findings: int
     events_created: int
+    skipped_existing: int
     results: list[dict[str, str | int]]
