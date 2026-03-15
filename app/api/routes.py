@@ -39,7 +39,18 @@ def ingest_dependabot(
         return ingest_dependabot_alerts(db, owner=owner, repo=repo, use_mock=use_mock)
     except ValueError as exc:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        detail = str(exc)
+        if "unauthorized" in detail.lower():
+            raise HTTPException(status_code=401, detail=detail) from exc
+        if "forbidden" in detail.lower():
+            raise HTTPException(status_code=403, detail=detail) from exc
+        if "not found" in detail.lower():
+            raise HTTPException(status_code=404, detail=detail) from exc
+        if "rate limited" in detail.lower():
+            raise HTTPException(status_code=429, detail=detail) from exc
+        if "server error" in detail.lower():
+            raise HTTPException(status_code=502, detail=detail) from exc
+        raise HTTPException(status_code=400, detail=detail) from exc
     except requests.RequestException as exc:
         db.rollback()
         raise HTTPException(status_code=502, detail=f"GitHub API request failed: {exc}") from exc

@@ -18,6 +18,16 @@ def load_rules() -> dict:
         return json.load(file_handle)
 
 
+def build_destination_error(prefix: str, response: requests.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+
+    message = payload.get("message") or response.text or "Request failed."
+    return f"{prefix} failed with HTTP {response.status_code}: {message}"
+
+
 def send_slack_alert(vulnerability: Vulnerability) -> tuple[str, str]:
     message = (
         f"[ThreatLens] Critical vulnerability in {vulnerability.repository}: "
@@ -33,7 +43,8 @@ def send_slack_alert(vulnerability: Vulnerability) -> tuple[str, str]:
             json={"text": message},
             timeout=10,
         )
-        response.raise_for_status()
+        if not response.ok:
+            return "failed", build_destination_error("Slack alert", response)
         return "sent", "Slack alert sent successfully."
     except requests.RequestException as exc:
         return "failed", f"Slack alert failed: {exc}"
@@ -74,7 +85,8 @@ def create_jira_ticket(vulnerability: Vulnerability) -> tuple[str, str]:
             },
             timeout=10,
         )
-        response.raise_for_status()
+        if not response.ok:
+            return "failed", build_destination_error("Jira ticket creation", response)
         return "created", "Jira ticket created successfully."
     except requests.RequestException as exc:
         return "failed", f"Jira ticket creation failed: {exc}"

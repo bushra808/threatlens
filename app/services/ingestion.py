@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 
 import requests
@@ -11,6 +12,7 @@ from app.services.normalization import normalize_dependabot_alert
 
 
 MOCK_DATA_FILE = Path(__file__).resolve().parents[2] / "mock_data" / "dependabot_alerts.json"
+TRANSIENT_GITHUB_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
 def vulnerability_key_from_dict(vulnerability: dict) -> tuple[str, str]:
@@ -40,6 +42,31 @@ def load_dependabot_alerts(file_path: Path | None = None) -> list[dict]:
         return json.load(file_handle)
 
 
+def build_github_api_error(response: requests.Response, owner: str, repo: str) -> ValueError:
+    status_code = response.status_code
+
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+
+    message = payload.get("message") or response.text or "GitHub API request failed."
+    prefix = f"GitHub Dependabot API error for {owner}/{repo}"
+
+    if status_code == 401:
+        return ValueError(f"{prefix}: unauthorized. Check GITHUB_TOKEN.")
+    if status_code == 403:
+        return ValueError(f"{prefix}: forbidden. Check token permissions or rate limits. {message}")
+    if status_code == 404:
+        return ValueError(f"{prefix}: repository not found or token cannot access it.")
+    if status_code == 429:
+        return ValueError(f"{prefix}: rate limited. {message}")
+    if status_code >= 500:
+        return ValueError(f"{prefix}: GitHub server error ({status_code}). {message}")
+
+    return ValueError(f"{prefix}: HTTP {status_code}. {message}")
+
+
 def fetch_dependabot_alerts_from_github(owner: str, repo: str, token: str) -> list[dict]:
     """Fetch Dependabot alerts for a repository using the GitHub REST API."""
 
@@ -61,11 +88,38 @@ def fetch_dependabot_alerts_from_github(owner: str, repo: str, token: str) -> li
     alerts: list[dict] = []
 
     while url:
-        response = requests.get(url, headers=headers, params=params, timeout=30)
-        response.raise_for_status()
-        page_alerts = response.json()
+        last_error: ValueError | None = None
+
+        for attempt in range(2):
+            response = requests.get(url, headers=headers, params=params, timeout=30)
+            if response.ok:
+                break
+
+            last_error = build_github_api_error(response, owner=owner, repo=repo)
+            if response.status_code not in TRANSIENT_GITHUB_STATUS_CODES or attempt == 1:
+                raise last_error
+
+            time.sleep(1)
+        else:  # pragma: no cover - defensive fallback
+            if last_error:
+                raise last_error
+            raise ValueError(f"GitHub Dependabot API error for {owner}/{repo}: request failed.")
+
+        try:
+            page_alerts = response.json()
+        except ValueError as exc:
+            raise ValueError(
+                f"GitHub Dependabot API for {owner}/{repo} returned invalid JSON."
+            ) from exc
+
+        if not isinstance(page_alerts, list):
+            raise ValueError(
+                f"GitHub Dependabot API for {owner}/{repo} returned an unexpected response shape."
+            )
 
         for alert in page_alerts:
+            if not isinstance(alert, dict):
+                continue
             alert["repository"] = f"{owner}/{repo}"
 
         alerts.extend(page_alerts)
