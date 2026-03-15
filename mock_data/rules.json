@@ -1,0 +1,6 @@
+{
+  "critical": [
+    "slack_alert",
+    "jira_ticket"
+  ]
+}

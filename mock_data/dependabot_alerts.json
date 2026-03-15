@@ -1,0 +1,106 @@
+[
+  {
+    "id": 101,
+    "repository": "brokencrystals",
+    "dependency": {
+      "package": {
+        "name": "urllib3"
+      }
+    },
+    "security_advisory": {
+      "ghsa_id": "GHSA-34jh-p97f-mpxf",
+      "summary": "urllib3 allows request smuggling in some proxy configurations",
+      "description": "A malformed header handling issue may allow downstream proxy confusion when applications trust unvalidated upstream traffic.",
+      "severity": "critical",
+      "cvss": {
+        "score": 9.8
+      },
+      "cwes": [
+        {
+          "cwe_id": "CWE-444"
+        }
+      ]
+    },
+    "state": "open",
+    "created_at": "2026-03-10T09:30:00Z",
+    "updated_at": "2026-03-14T06:45:00Z"
+  },
+  {
+    "id": 102,
+    "repository": "brokencrystals",
+    "dependency": {
+      "package": {
+        "name": "jinja2"
+      }
+    },
+    "security_advisory": {
+      "ghsa_id": "GHSA-q2x7-8rv6-6q7h",
+      "summary": "Jinja2 sandbox escape via crafted template payload",
+      "description": "Improper sandbox isolation may allow template authors to access restricted Python objects in vulnerable versions.",
+      "severity": "high",
+      "cvss": {
+        "score": 8.1
+      },
+      "cwes": [
+        {
+          "cwe_id": "CWE-94"
+        }
+      ]
+    },
+    "state": "open",
+    "created_at": "2026-03-09T11:15:00Z",
+    "updated_at": "2026-03-13T12:20:00Z"
+  },
+  {
+    "id": 103,
+    "repository": "brokencrystals",
+    "dependency": {
+      "package": {
+        "name": "pyyaml"
+      }
+    },
+    "security_advisory": {
+      "ghsa_id": "GHSA-7fhm-mqm4-2wp7",
+      "summary": "PyYAML unsafe loader can deserialize attacker-controlled objects",
+      "description": "Applications using unsafe loaders may allow arbitrary object construction and unsafe code paths.",
+      "severity": "critical",
+      "cvss": {
+        "score": 9.1
+      },
+      "cwes": [
+        {
+          "cwe_id": "CWE-502"
+        }
+      ]
+    },
+    "state": "open",
+    "created_at": "2026-03-08T07:00:00Z",
+    "updated_at": "2026-03-14T05:10:00Z"
+  },
+  {
+    "id": 104,
+    "repository": "brokencrystals",
+    "dependency": {
+      "package": {
+        "name": "requests"
+      }
+    },
+    "security_advisory": {
+      "ghsa_id": "GHSA-9wx4-h78v-vm56",
+      "summary": "Requests may leak authorization headers during redirect edge cases",
+      "description": "Certain redirect flows may preserve sensitive headers longer than expected when applications do not pin trusted hosts.",
+      "severity": "medium",
+      "cvss": {
+        "score": 6.4
+      },
+      "cwes": [
+        {
+          "cwe_id": "CWE-200"
+        }
+      ]
+    },
+    "state": "open",
+    "created_at": "2026-03-07T15:40:00Z",
+    "updated_at": "2026-03-12T10:00:00Z"
+  }
+]
