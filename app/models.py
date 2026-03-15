@@ -9,6 +9,7 @@ class Vulnerability(Base):
     __tablename__ = "vulnerabilities"
 
     id = Column(Integer, primary_key=True, index=True)
+    external_alert_id = Column(String(255), nullable=True, index=True)
     source = Column(String(50), nullable=False, index=True)
     repository = Column(String(255), nullable=False, index=True)
     vulnerability_id = Column(String(255), nullable=False, index=True)

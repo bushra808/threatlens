@@ -37,6 +37,7 @@ def normalize_dependabot_alert(raw_alert: dict) -> dict:
         category = cwes[0].get("cwe_id") or category
 
     return {
+        "external_alert_id": str(raw_alert.get("number") or raw_alert.get("id")) if raw_alert.get("number") or raw_alert.get("id") else None,
         "source": "dependabot",
         "repository": raw_alert.get("repository", "unknown-repository"),
         "vulnerability_id": advisory.get("ghsa_id", f"dependabot-{raw_alert.get('id', 'unknown')}"),

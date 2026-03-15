@@ -13,21 +13,24 @@ from app.services.normalization import normalize_dependabot_alert
 MOCK_DATA_FILE = Path(__file__).resolve().parents[2] / "mock_data" / "dependabot_alerts.json"
 
 
-def vulnerability_key_from_dict(vulnerability: dict) -> tuple[str, str, str, str]:
+def vulnerability_key_from_dict(vulnerability: dict) -> tuple[str, str]:
+    external_alert_id = vulnerability.get("external_alert_id")
+    if external_alert_id:
+        return (vulnerability["source"], external_alert_id)
+
     return (
-        vulnerability["repository"],
-        vulnerability["vulnerability_id"],
-        vulnerability["package_name"],
         vulnerability["source"],
+        f"{vulnerability['repository']}::{vulnerability['vulnerability_id']}::{vulnerability['package_name']}",
     )
 
 
-def vulnerability_key_from_model(vulnerability: Vulnerability) -> tuple[str, str, str, str]:
+def vulnerability_key_from_model(vulnerability: Vulnerability) -> tuple[str, str]:
+    if vulnerability.external_alert_id:
+        return (vulnerability.source, vulnerability.external_alert_id)
+
     return (
-        vulnerability.repository,
-        vulnerability.vulnerability_id,
-        vulnerability.package_name,
         vulnerability.source,
+        f"{vulnerability.repository}::{vulnerability.vulnerability_id}::{vulnerability.package_name}",
     )
 
 
@@ -104,6 +107,7 @@ def apply_vulnerability_changes(existing: Vulnerability, normalized: dict) -> bo
         changed = True
 
     for field_name in [
+        "external_alert_id",
         "severity",
         "cvss_score",
         "category",
@@ -139,7 +143,7 @@ def ingest_dependabot_alerts(
     updated = 0
     remediated = 0
     unchanged = 0
-    current_scan_keys: set[tuple[str, str, str, str]] = set()
+    current_scan_keys: set[tuple[str, str]] = set()
     repositories_in_scope = set()
 
     github_owner = owner or settings.GITHUB_OWNER
@@ -152,16 +156,19 @@ def ingest_dependabot_alerts(
         current_scan_keys.add(vulnerability_key_from_dict(normalized))
         repositories_in_scope.add(normalized["repository"])
 
-        existing = (
-            db.query(Vulnerability)
-            .filter(
+        existing_query = db.query(Vulnerability).filter(Vulnerability.source == normalized["source"])
+        if normalized["external_alert_id"]:
+            existing_query = existing_query.filter(
+                Vulnerability.external_alert_id == normalized["external_alert_id"]
+            )
+        else:
+            existing_query = existing_query.filter(
                 Vulnerability.repository == normalized["repository"],
                 Vulnerability.vulnerability_id == normalized["vulnerability_id"],
                 Vulnerability.package_name == normalized["package_name"],
-                Vulnerability.source == normalized["source"],
             )
-            .first()
-        )
+
+        existing = existing_query.first()
 
         if existing:
             if apply_vulnerability_changes(existing, normalized):
@@ -173,7 +180,9 @@ def ingest_dependabot_alerts(
         db.add(Vulnerability(**normalized))
         inserted += 1
 
-    if repositories_in_scope:
+    should_mark_missing_as_remediated = use_mock or not (github_owner and github_repo)
+
+    if repositories_in_scope and should_mark_missing_as_remediated:
         stale_findings = (
             db.query(Vulnerability)
             .filter(

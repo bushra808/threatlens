@@ -38,9 +38,14 @@ def ingest_dependabot(
     try:
         return ingest_dependabot_alerts(db, owner=owner, repo=repo, use_mock=use_mock)
     except ValueError as exc:
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except requests.RequestException as exc:
+        db.rollback()
         raise HTTPException(status_code=502, detail=f"GitHub API request failed: {exc}") from exc
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {exc}") from exc
 
 
 @router.get("/vulnerabilities", response_model=list[VulnerabilityRead])
@@ -94,7 +99,11 @@ def get_summary(db: Session = Depends(get_db)) -> dict:
 
 @router.post("/automations/run", response_model=AutomationRunResponse)
 def run_automations(db: Session = Depends(get_db)) -> dict:
-    return run_critical_automations(db)
+    try:
+        return run_critical_automations(db)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Automation run failed: {exc}") from exc
 
 
 @router.get("/automation-events", response_model=list[AutomationEventRead])

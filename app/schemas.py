@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class VulnerabilityBase(BaseModel):
+    external_alert_id: str | None = None
     source: str
     repository: str
     vulnerability_id: str
