@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ThreatLens Dashboard</title>
+    <link rel="stylesheet" href="/static/dashboard.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">ThreatLens</p>
+          <h1>Security Automation Dashboard</h1>
+          <p class="hero-copy">
+            Build your own board from live vulnerability and automation widgets.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button id="refresh-all" class="button button-secondary">Refresh Data</button>
+          <button id="run-automations" class="button button-primary">Run Automations</button>
+        </div>
+      </header>
+
+      <section class="control-panel">
+        <div class="control-block">
+          <label for="widget-select">Add widget</label>
+          <div class="inline-controls">
+            <select id="widget-select">
+              <option value="summary">Summary</option>
+              <option value="open-critical">Open Critical Findings</option>
+              <option value="false-positive">False Positives</option>
+              <option value="remediated">Remediated Findings</option>
+              <option value="recent-events">Recent Automation Events</option>
+              <option value="repo-priority">Repository P1 Findings</option>
+            </select>
+            <button id="add-widget" class="button button-primary">Add Widget</button>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="filter">
+            <label for="repository-filter">Repository</label>
+            <select id="repository-filter">
+              <option value="">All repositories</option>
+            </select>
+          </div>
+          <div class="filter">
+            <label for="status-filter">Status</label>
+            <select id="status-filter">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="remediated">Remediated</option>
+              <option value="false_positive">False Positive</option>
+            </select>
+          </div>
+          <div class="filter">
+            <label for="severity-filter">Severity</label>
+            <select id="severity-filter">
+              <option value="">All severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section id="flash-message" class="flash-message hidden" aria-live="polite"></section>
+
+      <main id="widget-grid" class="widget-grid"></main>
+    </div>
+
+    <template id="widget-template">
+      <article class="widget-card">
+        <div class="widget-header">
+          <div>
+            <p class="widget-type"></p>
+            <h2 class="widget-title"></h2>
+          </div>
+          <button class="widget-remove" type="button" aria-label="Remove widget">Remove</button>
+        </div>
+        <div class="widget-body"></div>
+      </article>
+    </template>
+
+    <script src="/static/dashboard.js" defer></script>
+  </body>
+</html>

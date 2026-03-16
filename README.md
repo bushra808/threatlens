@@ -172,6 +172,7 @@ source ~/.zshrc
 ## API endpoints
 
 - `GET /health`: basic app and database health check.
+- `GET /`: built-in dashboard UI with selectable widgets.
 - `POST /ingest/dependabot`: fetches Dependabot alerts from GitHub or falls back to mock data.
 - `GET /vulnerabilities`: lists stored vulnerability records and supports `severity`, `priority`, `repository`, and `status` filters.
 - `GET /summary`: returns totals grouped by severity and priority.
@@ -192,6 +193,15 @@ curl http://127.0.0.1:8000/summary
 curl -X POST http://127.0.0.1:8000/automations/run
 curl http://127.0.0.1:8000/automation-events
 ```
+
+## Dashboard UI
+
+ThreatLens includes a lightweight built-in dashboard served from the FastAPI app itself.
+
+- Open `http://127.0.0.1:8000/` in your browser.
+- Use the widget dropdown to add cards like summary, open critical findings, remediated findings, and recent automation events.
+- Use repository, severity, and status filters to narrow the findings widgets.
+- Use the `Run Automations` button to trigger Slack/Jira actions directly from the dashboard.
 
 ## GitHub Dependabot ingestion
 
